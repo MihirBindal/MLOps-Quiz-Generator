@@ -1,0 +1,17 @@
+# Ignore environment variables
+.env
+
+# Ignore virtual environments
+venv_ingest/
+venv_generate/
+venv_frontend/
+
+# Ignore local database storage
+qdrant_storage/
+
+# Ignore Python caches
+__pycache__/
+*.pyc
+
+#Ignore pdfs
+*.pdf

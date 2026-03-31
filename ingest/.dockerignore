@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+venv/
+qdrant_storage/
+temp_*
+Dockerfile
+docker-compose.yml
