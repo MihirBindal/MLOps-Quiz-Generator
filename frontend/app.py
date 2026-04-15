@@ -6,7 +6,7 @@ INGEST_URL = os.environ.get("INGEST_URL", "http://localhost:9000")
 GENERATE_URL = os.environ.get("GENERATE_URL", "http://localhost:9001")
 
 st.set_page_config(page_title="AI Quiz Master", layout="centered")
-st.title("🧠 SPE MLOps: AI Quiz Generator")
+st.title("SPE MLOps: AI Quiz Generator")
 
 # Fetch available documents on load
 @st.cache_data(ttl=5) # Cache for 5 seconds to prevent spamming the API
