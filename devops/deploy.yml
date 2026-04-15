@@ -15,12 +15,12 @@
         mode: '0755'
 
     - name: Deploy the new architecture via Docker Compose
-      community.docker.docker_compose:
+      community.docker.docker_compose_v2: # <--- Verified V2 module
         project_src: "{{ project_dir }}"
         state: present
         pull: always
         remove_orphans: yes
-      register: compose_output
+      register: compose_output # <--- Correctly aligned
 
     - name: Display Deployment Status
       debug:
