@@ -16,7 +16,7 @@
         mode: '0755'
 
     - name: Pull the latest microservice images from Docker Hub
-      command: "docker compose -f {{ compose_file }} pull"
+      command: "docker-compose -f {{ compose_file }} pull"
       register: pull_output
       changed_when: "'Downloaded newer image' in pull_output.stdout or 'Status: Downloaded newer image' in pull_output.stderr"
 
