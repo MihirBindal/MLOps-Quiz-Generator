@@ -56,6 +56,15 @@ pipeline {
                 }
             }
         }
+        stage('Deploy to Production (Ansible)') {
+            steps {
+                echo "Triggering Ansible Playbook for deployment..."
+                dir('devops') {
+                    // This executes the playbook we just wrote locally
+                    sh "ansible-playbook deploy.yml"
+                }
+            }
+        }
     }
 
     post {

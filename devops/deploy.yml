@@ -1,0 +1,35 @@
+---
+- name: Deploy SPE MLOps Architecture
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  
+  vars:
+    project_dir: "/home/mihir/SPE/major"
+    compose_file: "{{ project_dir }}/docker-compose.yaml"
+
+  tasks:
+    - name: Ensure the Qdrant storage directory exists securely
+      file:
+        path: "{{ project_dir }}/qdrant_storage"
+        state: directory
+        mode: '0755'
+
+    - name: Pull the latest microservice images from Docker Hub
+      command: "docker compose -f {{ compose_file }} pull"
+      register: pull_output
+      changed_when: "'Downloaded newer image' in pull_output.stdout or 'Status: Downloaded newer image' in pull_output.stderr"
+
+    - name: Tear down the old architecture (if running)
+      command: "docker compose -f {{ compose_file }} down"
+      
+    - name: Deploy the new architecture dynamically
+      command: "docker compose -f {{ compose_file }} up -d"
+      
+    - name: Verify all containers are running
+      command: "docker compose -f {{ compose_file }} ps"
+      register: ps_output
+      
+    - name: Display Deployment Status
+      debug:
+        msg: "{{ ps_output.stdout_lines }}"
