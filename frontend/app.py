@@ -1,8 +1,9 @@
 import streamlit as st
 import requests
+import os
 
-INGEST_URL = "http://localhost:9000"
-GENERATE_URL = "http://localhost:9001"
+INGEST_URL = os.environ.get("INGEST_URL", "http://localhost:9000")
+GENERATE_URL = os.environ.get("GENERATE_URL", "http://localhost:9001")
 
 st.set_page_config(page_title="AI Quiz Master", layout="centered")
 st.title("🧠 SPE MLOps: AI Quiz Generator")

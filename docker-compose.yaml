@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  # 1. The Vector Database
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+    volumes:
+      - ./qdrant_storage:/qdrant/storage
+
+  # 2. The Data Ingestion Service
+  ingest:
+    build: ./ingest
+    ports:
+      - "9000:9000"
+    environment:
+      - QDRANT_HOST=qdrant
+    depends_on:
+      - qdrant
+
+  # 3. The AI Generation Service
+  generate:
+    build: ./generate
+    ports:
+      - "9001:9001"
+    environment:
+      - QDRANT_HOST=qdrant
+    env_file:
+      - .env  # Make sure you copy your generate/.env to the root folder!
+    depends_on:
+      - qdrant
+
+  # 4. The Streamlit User Interface
+  frontend:
+    build: ./frontend
+    ports:
+      - "9002:9002"
+    environment:
+      - INGEST_URL=http://ingest:9000
+      - GENERATE_URL=http://generate:9001
+    depends_on:
+      - ingest
+      - generate
