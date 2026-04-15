@@ -14,8 +14,8 @@
         state: directory
         mode: '0755'
 
-    - name: Deploy via Docker Compose
-  community.docker.docker_compose:
+    - name: Deploy the new architecture via Docker Compose
+      community.docker.docker_compose_v2:
         project_src: "{{ project_dir }}"
         state: present
         pull: always
