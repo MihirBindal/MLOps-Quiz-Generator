@@ -26,9 +26,9 @@ GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GOOGLE_API_KEY:
     print("WARNING: GEMINI_API_KEY is missing. Generation will fail.")
 
-# Re-initializing the LLM as requested for Gemini 2.5 Flash
+# Re-initializing the LLM as requested for Gemini 1.5 Flash
 llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash", 
+    model="gemini-1.5-flash", 
     google_api_key=GOOGLE_API_KEY, 
     temperature=0.3 
 )
@@ -41,9 +41,10 @@ class GenerateRequest(BaseModel):
 chain = prompt | llm | parser
 
 # --- 2. The API Endpoint ---
-# CHANGED: Removed 'async' so FastAPI delegates this to a background thread pool!
 @app.post("/generate")
 def generate_quiz(request: GenerateRequest):
+    print(f"DEBUG: Generating quiz for topic='{request.topic}' source='{request.source_file}'")
+    
     search_query = request.topic if request.topic else "core concepts, main ideas, summary, definitions"
     query_vector = embeddings_model.embed_query(search_query)
 
@@ -64,8 +65,10 @@ def generate_quiz(request: GenerateRequest):
         score_threshold=threshold
     )
 
+    print(f"DEBUG: Found {len(search_result.points)} points in Qdrant")
+
     if not search_result.points:
-        raise HTTPException(status_code=404, detail="No relevant context found in this document.")
+        raise HTTPException(status_code=404, detail=f"No relevant context found for '{request.topic}' in '{request.source_file}'.")
 
     context_text = "\n\n".join([hit.payload.get("text", "") for hit in search_result.points])
 
