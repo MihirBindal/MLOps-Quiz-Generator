@@ -159,7 +159,6 @@ if 'quiz_data' in st.session_state:
         if st.session_state['quiz_submitted']:
             correct_count = sum(1 for i, q in enumerate(questions_list) 
                                if st.session_state['user_answers'].get(i) == q['correct_answer'])
-            st.balloons()
             st.metric("Your Final Score", f"{correct_count} / {len(questions_list)}")
             if st.button("Start New Quiz"):
                 del st.session_state['quiz_data']
