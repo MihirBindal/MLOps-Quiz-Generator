@@ -7,7 +7,6 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
 import uuid
 
-# Import our modular parsers
 from parsers.pdf_parser import parse_pdf
 from parsers.docx_parser import parse_docx
 from parsers.pptx_parser import parse_pptx
