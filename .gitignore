@@ -15,3 +15,6 @@ __pycache__/
 
 #Ignore pdfs
 *.pdf
+
+# Ignore Vault keys
+devops/vault-keys.txt
