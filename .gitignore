@@ -16,5 +16,6 @@ __pycache__/
 #Ignore pdfs
 *.pdf
 
-# Ignore Vault keys
+# Ignore Vault keys and scripts
 devops/vault-keys.txt
+devops/unseal_vault.sh
