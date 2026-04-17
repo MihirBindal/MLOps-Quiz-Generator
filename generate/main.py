@@ -113,9 +113,9 @@ def generate_quiz(request: GenerateRequest):
         result = parser.parse(response.content)
         
         # Extract token usage
-        usage = response.response_metadata.get("usage", {})
-        prompt_tokens = usage.get("prompt_tokens", 0)
-        completion_tokens = usage.get("completion_tokens", 0)
+        usage = getattr(response, "usage_metadata", {})
+        prompt_tokens = usage.get("input_tokens", 0)
+        completion_tokens = usage.get("output_tokens", 0)
         
         latency = time.time() - start_time
         
