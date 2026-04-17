@@ -5,6 +5,7 @@
   kubernetes.core.k8s:
     state: present
     src: "{{ playbook_dir }}/../{{ item }}"
+    namespace: default
   loop:
     - qdrant.yaml
     - elasticsearch.yaml
