@@ -26,9 +26,8 @@ GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GOOGLE_API_KEY:
     print("WARNING: GEMINI_API_KEY is missing. Generation will fail.")
 
-# Re-initializing the LLM as requested for Gemini 1.5 Flash
 llm = ChatGoogleGenerativeAI(
-    model="gemini-1.5-flash", 
+    model="gemini-2.5-flash", 
     google_api_key=GOOGLE_API_KEY, 
     temperature=0.3 
 )
