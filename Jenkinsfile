@@ -57,7 +57,7 @@ pipeline {
                 echo "Triggering Ansible Playbook for deployment..."
                 dir('devops/ansible') {
                     sh "pip3 install kubernetes --break-system-packages || pip3 install kubernetes"
-                    sh "ansible-playbook deploy.yml"
+                    sh "KUBECONFIG=/home/mihir/.kube/config ansible-playbook deploy.yml"
                 }
             }
         }

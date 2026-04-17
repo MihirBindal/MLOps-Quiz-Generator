@@ -99,6 +99,10 @@ def generate_quiz(request: GenerateRequest):
             # 3. Return a clean 429 HTTP Status Code
             raise HTTPException(status_code=429, detail=message)
             
+        elif "503 UNAVAILABLE" in error_str and "high demand" in error_str:
+            message = "The Gemini API is currently experiencing high demand. Please try again in a few moments."
+            raise HTTPException(status_code=503, detail=message)
+            
         # 4. Fallback for any other type of crash
         raise HTTPException(status_code=500, detail=f"LLM failed: {error_str}")
     
