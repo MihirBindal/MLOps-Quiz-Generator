@@ -1,14 +1,16 @@
 import os
+import re
+import traceback
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from qdrant_client import QdrantClient
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.prompts import PromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
+from qdrant_client.models import Filter, FieldCondition, MatchValue
+
+# Import your external configurations
 from api_define import llm
 from prompt_template import prompt, parser
-from qdrant_client.models import Filter, FieldCondition, MatchValue
 
 app = FastAPI(title="Generate Service - AI Quiz Master")
 
@@ -20,49 +22,38 @@ COLLECTION_NAME = "spe_quiz_knowledge"
 print("Loading Embedding Model for Retrieval...")
 embeddings_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
-# We grab the API key from the Linux environment
 GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GOOGLE_API_KEY:
     print("WARNING: GEMINI_API_KEY is missing. Generation will fail.")
 
+# Re-initializing the LLM as requested for Gemini 2.5 Flash
 llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash", # <-- THIS IS THE ONLY CHANGE
+    model="gemini-2.5-flash", 
     google_api_key=GOOGLE_API_KEY, 
     temperature=0.3 
 )
 
-# --- 2. Data Schemas ---
-class QuizQuestion(BaseModel):
-    question: str = Field(description="The quiz question string")
-    options: list[str] = Field(description="List of 4 possible answers")
-    correct_answer: str = Field(description="The correct answer string")
-    explanation: str = Field(description="Why this is the correct answer based on the text")
-
 class GenerateRequest(BaseModel):
-    topic: str = "" # Now optional
+    topic: str = "" 
     source_file: str = "All Documents"
     num_questions: int = 1
 
 chain = prompt | llm | parser
 
-# --- 4. The API Endpoint ---
+# --- 2. The API Endpoint ---
+# CHANGED: Removed 'async' so FastAPI delegates this to a background thread pool!
 @app.post("/generate")
-async def generate_quiz(request: GenerateRequest):
-    # The "Secret Prompt" workaround for auto-generating without a topic
+def generate_quiz(request: GenerateRequest):
     search_query = request.topic if request.topic else "core concepts, main ideas, summary, definitions"
     query_vector = embeddings_model.embed_query(search_query)
 
-    # 1. THE METADATA FILTER
     query_filter = None
     if request.source_file != "All Documents":
         query_filter = Filter(
             must=[FieldCondition(key="source", match=MatchValue(value=request.source_file))]
         )
 
-    # Grab more chunks if we need more questions
     chunks_to_fetch = 5 if request.num_questions == 1 else 10
-    
-    # We drop the strict score_threshold if we are doing a generic "Auto-Generate"
     threshold = 0.5 if request.topic else 0.2 
 
     search_result = qdrant.query_points(
@@ -76,11 +67,9 @@ async def generate_quiz(request: GenerateRequest):
     if not search_result.points:
         raise HTTPException(status_code=404, detail="No relevant context found in this document.")
 
-    # Extract the payload from the .points list
     context_text = "\n\n".join([hit.payload.get("text", "") for hit in search_result.points])
 
     try:
-        # Pass the variables to your prompt
         display_topic = request.topic if request.topic else f"the core concepts of {request.source_file}"
         result = chain.invoke({
             "topic": display_topic, 
@@ -92,8 +81,27 @@ async def generate_quiz(request: GenerateRequest):
         return result
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"LLM failed: {str(e)}")
+        error_str = str(e)
+        print("====== LLM GENERATION CRASH ======")
+        traceback.print_exc()
+        print("==================================")
+        
+        # 1. Check if it's a Google API Rate Limit error
+        if "429 RESOURCE_EXHAUSTED" in error_str or "Quota exceeded" in error_str:
+            # 2. Extract the exact seconds using regex
+            match = re.search(r"retry in (\d+\.?\d*)s", error_str)
+            if match:
+                wait_time = int(float(match.group(1))) + 1 # Round up to the nearest second
+                message = f"Google API Rate Limit Reached. Quota resets in {wait_time} seconds."
+            else:
+                message = "Google API Rate Limit Reached. Please wait 30 seconds."
+                
+            # 3. Return a clean 429 HTTP Status Code
+            raise HTTPException(status_code=429, detail=message)
+            
+        # 4. Fallback for any other type of crash
+        raise HTTPException(status_code=500, detail=f"LLM failed: {error_str}")
     
 @app.get("/health")
-async def health_check():
+def health_check():
     return {"status": "healthy"}

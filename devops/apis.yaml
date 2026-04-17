@@ -1,0 +1,94 @@
+---
+# ==========================================
+# INGEST SERVICE (Port 9000)
+# ==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingest-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ingest
+  template:
+    metadata:
+      labels:
+        app: ingest
+    spec:
+      containers:
+      - name: ingest
+        image: mihirbindal/spe-ingest:latest 
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 9000
+        env:
+        - name: QDRANT_HOST
+          value: "qdrant"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingest-api
+spec:
+  selector:
+    app: ingest
+  ports:
+    - protocol: TCP
+      port: 9000
+      targetPort: 9000
+
+---
+# ==========================================
+# GENERATE SERVICE (Port 9001)
+# ==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: generate-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: generate
+  template:
+    metadata:
+      labels:
+        app: generate
+      # FIXED: Annotations are now properly aligned with labels
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "internal-app"
+        vault.hashicorp.com/agent-inject-secret-config: "secret/data/ai-quiz"
+        vault.hashicorp.com/agent-inject-template-config: |
+          {{- with secret "secret/data/ai-quiz" -}}
+          export GEMINI_API_KEY="{{ .Data.data.GEMINI_API_KEY }}"
+          {{- end -}}
+    spec:
+      containers:
+      - name: generate
+        image: mihirbindal/spe-generate:latest
+        imagePullPolicy: Always
+        # FIXED: We intercept the boot sequence to load the Vault secret into the environment!
+        command: ["/bin/sh", "-c"]
+        args: [". /vault/secrets/config && uvicorn main:app --host 0.0.0.0 --port 9001"]
+        ports:
+        - containerPort: 9001
+        env:
+        - name: QDRANT_HOST
+          value: "qdrant"
+        # The old K8s secret reference has been safely removed.
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: generate-api
+spec:
+  selector:
+    app: generate
+  ports:
+    - protocol: TCP
+      port: 9001
+      targetPort: 9001

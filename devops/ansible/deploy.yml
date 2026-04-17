@@ -1,0 +1,7 @@
+---
+- name: Deploy SPE MLOps Pipeline
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  roles:
+    - k8s_deploy

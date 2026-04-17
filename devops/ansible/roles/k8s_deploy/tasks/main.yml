@@ -1,0 +1,31 @@
+---
+# We are deploying to the 'default' namespace as requested
+
+- name: Apply Infrastructure Manifests (Database & ELK)
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ item }}"
+    namespace: default
+  loop:
+    - "{{ playbook_dir }}/../../qdrant.yaml"
+    - "{{ playbook_dir }}/../../elasticsearch.yaml"
+    - "{{ playbook_dir }}/../../logstash.yaml"
+    - "{{ playbook_dir }}/../../kibana.yaml"
+    - "{{ playbook_dir }}/../../filebeat.yaml"
+
+- name: Apply Microservices Manifests & Autoscaling
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ item }}"
+    namespace: default
+  loop:
+    - "{{ playbook_dir }}/../../apis.yaml"
+    - "{{ playbook_dir }}/../../frontend.yaml"
+    - "{{ playbook_dir }}/../../hpa.yaml"
+
+- name: Force K8s to pull the newly built images from Docker Hub
+  command: kubectl rollout restart deployment/{{ item }}
+  loop:
+    - ingest-api
+    - generate-api
+    - frontend-ui

@@ -10,7 +10,6 @@ st.title("SPE MLOps: AI Quiz Generator")
 
 # Fetch available documents on load
 @st.cache_data(ttl=5) # Cache for 5 seconds to prevent spamming the API
-@st.cache_data(ttl=5)
 def get_documents():
     try:
         # Added a 2-second timeout
@@ -39,7 +38,7 @@ with st.sidebar:
                     st.success(f"Processing {uploaded_file.name}!")
                     st.cache_data.clear() # Clear cache so new doc shows up
                 else:
-                    st.error("Ingestion failed.")
+                    st.error("Ingestion failed.")  
             except:
                 st.error("Ingest Service (Port 9000) offline!")
 
@@ -50,7 +49,6 @@ with st.sidebar:
     selected_doc = st.selectbox("Target Document:", doc_options)
 
 # --- 2. Main Canvas ---
-st.header("🎯 Generate Assessment")
 
 col1, col2 = st.columns(2)
 
@@ -64,8 +62,11 @@ with col1:
                 if res.status_code == 200:
                     st.session_state['quiz_data'] = res.json()
                     st.rerun()
+                elif res.status_code == 429:
+                    error_detail = res.json().get("detail", "Rate limit reached.")
+                    st.warning(f"{error_detail}")
                 else:
-                    st.error("Failed to generate.")
+                    st.error("Failed to generate. Please check the backend logs.")
 
 with col2:
     st.markdown("**Option B: Full Document Quiz**")
@@ -76,8 +77,11 @@ with col2:
             if res.status_code == 200:
                 st.session_state['quiz_data'] = res.json()
                 st.rerun()
+            elif res.status_code == 429:
+                error_detail = res.json().get("detail", "Rate limit reached.")
+                st.warning(f"{error_detail}")
             else:
-                st.error("Failed to generate.")
+                st.error("Failed to generate. Please check the backend logs.")
 
 # --- 3. Interactive Quiz Display ---
 if 'quiz_data' in st.session_state:
@@ -85,12 +89,12 @@ if 'quiz_data' in st.session_state:
     quiz_payload = st.session_state['quiz_data']
     questions_list = quiz_payload.get("questions", [])
     
-    # NEW: Check if the AI returned NO_DATA
+    # Check if the AI returned NO_DATA
     if not questions_list or questions_list[0].get('question') == "NO_DATA":
-        st.warning(f"⚠️ **Context Not Found**\n\nI could not find enough information about this topic in the selected document to generate a high-quality question. Please try a different topic or upload a more relevant document.")
+        st.warning(f"**Context Not Found**\n\nI could not find enough information about this topic in the selected document to generate a high-quality question. Please try a different topic or upload a more relevant document.")
     else:
         # If we have valid questions, render them as normal
-        st.subheader(f"📝 Your Assessment ({len(questions_list)} Questions)")
+        st.subheader(f"Your Assessment ({len(questions_list)} Questions)")
         
         for index, q in enumerate(questions_list):
             with st.container(border=True):
@@ -99,12 +103,12 @@ if 'quiz_data' in st.session_state:
                 
                 if user_choice:
                     if user_choice == q['correct_answer']:
-                        st.success("✅ Correct!")
+                        st.success("Correct!")
                     else:
-                        st.error(f"❌ Incorrect. The correct answer is: {q['correct_answer']}")
+                        st.error(f"Incorrect. The correct answer is: {q['correct_answer']}")
                     
                     specific_explanation = q.get('option_explanations', {}).get(user_choice, "No explanation provided.")
                     st.info(f"**Analysis:** {specific_explanation}")
                     
-        with st.expander("🔍 View Raw Source Context"):
+        with st.expander("View Raw Source Context"):
             st.caption(quiz_payload.get('source_context', 'No context available.'))

@@ -2,15 +2,12 @@ pipeline {
     agent any
 
     environment {
-        // Replace 'mihirbindal' with your actual Docker Hub username if different
         DOCKER_HUB_USER = 'mihirbindal'
         
-        // These are the names of the images we will create
         IMAGE_INGEST = "${DOCKER_HUB_USER}/spe-ingest"
         IMAGE_GENERATE = "${DOCKER_HUB_USER}/spe-generate"
         IMAGE_FRONTEND = "${DOCKER_HUB_USER}/spe-frontend"
-        
-        // This will tag the images with the Jenkins Build Number (e.g., v1, v2, v3)
+
         IMAGE_TAG = "v${env.BUILD_ID}"
     }
 
@@ -37,7 +34,6 @@ pipeline {
 
         stage('Push to Docker Hub') {
             steps {
-                // IMPORTANT: You must have a Jenkins credential saved named 'docker-hub-credentials'
                 withCredentials([usernamePassword(credentialsId: 'dockerhubcredentials', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
                     echo "Logging into Docker Hub..."
                     sh "echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin"
@@ -59,8 +55,7 @@ pipeline {
         stage('Deploy to Production (Ansible)') {
             steps {
                 echo "Triggering Ansible Playbook for deployment..."
-                dir('devops') {
-                    // This executes the playbook we just wrote locally
+                dir('devops/ansible') {
                     sh "ansible-playbook deploy.yml"
                 }
             }
@@ -73,10 +68,10 @@ pipeline {
             sh "docker image prune -f"
         }
         success {
-            echo "✅ Pipeline completed successfully! Images are live on Docker Hub."
+            echo "Pipeline completed successfully! Images are live on Docker Hub."
         }
         failure {
-            echo "❌ Pipeline failed. Check the logs."
+            echo "Pipeline failed. Check the logs."
         }
     }
 }
