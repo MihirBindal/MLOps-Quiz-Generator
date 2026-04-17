@@ -1,7 +1,32 @@
 import streamlit as st
 import requests
 import os
+import json
+import logging
+import time
+from datetime import datetime
 
+# --- 1. Structured Logging Setup ---
+class JsonFormatter(logging.Formatter):
+    def format(self, record):
+        log_data = {
+            "timestamp": datetime.utcfromtimestamp(record.created).isoformat() + "Z",
+            "level": record.levelname,
+            "service": "frontend-ui",
+            "message": record.getMessage(),
+        }
+        if hasattr(record, "app_data"):
+            log_data.update(record.app_data)
+        return json.dumps(log_data)
+
+logger = logging.getLogger("frontend-ui")
+logger.setLevel(logging.INFO)
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setFormatter(JsonFormatter())
+    logger.addHandler(handler)
+
+# --- 2. Configuration & API Endpoints ---
 INGEST_URL = os.environ.get("INGEST_URL", "http://localhost:9000")
 GENERATE_URL = os.environ.get("GENERATE_URL", "http://localhost:9001")
 
@@ -141,19 +166,13 @@ if 'quiz_data' in st.session_state:
                                        if st.session_state['user_answers'].get(i) == q['correct_answer'])
                     
                     # LOG THE SESSION (This will be picked up by ELK)
-                    import json
-                    from datetime import datetime
-                    log_entry = {
-                        "timestamp": datetime.utcnow().isoformat() + "Z",
-                        "level": "INFO",
-                        "service": "frontend-ui",
+                    logger.info("Quiz submitted", extra={"app_data": {
                         "event": "quiz_submitted",
                         "score": correct_count,
                         "total": len(questions_list),
                         "source": selected_doc,
                         "topic": topic if topic else "Auto-Generate"
-                    }
-                    print(json.dumps(log_entry))
+                    }})
                     st.rerun()
 
         if st.session_state['quiz_submitted']:
