@@ -9,6 +9,13 @@ data:
         port => 5044
       }
     }
+    filter {
+      if [message] =~ /^\{.*\}$/ {
+        json {
+          source => "message"
+        }
+      }
+    }
     output {
       elasticsearch {
         hosts => ["http://elasticsearch:9200"]

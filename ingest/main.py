@@ -1,19 +1,43 @@
 import os
 import shutil
+import time
+import json
+import logging
+import uuid
+from datetime import datetime
 from fastapi import FastAPI, File, UploadFile, BackgroundTasks
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import SentenceTransformerEmbeddings
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
-import uuid
 
 from parsers.pdf_parser import parse_pdf
 from parsers.docx_parser import parse_docx
 from parsers.pptx_parser import parse_pptx
 
+# --- 1. Structured Logging Setup ---
+class JsonFormatter(logging.Formatter):
+    def format(self, record):
+        log_data = {
+            "timestamp": datetime.utcfromtimestamp(record.created).isoformat() + "Z",
+            "level": record.levelname,
+            "service": "ingest-api",
+            "message": record.getMessage(),
+        }
+        if hasattr(record, "app_data"):
+            log_data.update(record.app_data)
+        return json.dumps(log_data)
+
+logger = logging.getLogger("ingest-api")
+logger.setLevel(logging.INFO)
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setFormatter(JsonFormatter())
+    logger.addHandler(handler)
+
 app = FastAPI(title="Ingest Service - Modular Multi-Format OCR")
 
-print("Loading SentenceTransformers...")
+logger.info("Loading SentenceTransformers...")
 embeddings_model = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
 QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
 qdrant = QdrantClient(host=QDRANT_HOST, port=6333)
@@ -34,45 +58,64 @@ def extract_text_routed(file_path: str, filename: str) -> str:
 
 def process_and_embed(file_path: str, filename: str):
     """The background worker that chunks and embeds the text."""
-    print(f"Started processing {filename}")
+    start_time = time.time()
+    logger.info(f"Started processing {filename}")
     
     # 1. DELEGATE EXTRACTION
-    full_text = extract_text_routed(file_path, filename)
-    
-    if not full_text.strip():
-        print(f"Warning: No text could be extracted from {filename}.")
-        os.remove(file_path)
-        return
+    try:
+        full_text = extract_text_routed(file_path, filename)
+        
+        if not full_text.strip():
+            logger.warning(f"No text extracted from {filename}", extra={"app_data": {
+                "event": "ingest_empty",
+                "filename": filename
+            }})
+            os.remove(file_path)
+            return
 
-    print(f"Extracted {len(full_text)} characters.")
+        # 2. CHUNK
+        splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+        chunks = splitter.split_text(full_text)
 
-    # 2. CHUNK
-    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-    chunks = splitter.split_text(full_text)
-    print(f"Created {len(chunks)} chunks.")
-
-    # 3. DATABASE SETUP
-    if not qdrant.collection_exists(COLLECTION_NAME):
-        qdrant.create_collection(
-            collection_name=COLLECTION_NAME,
-            vectors_config=VectorParams(size=384, distance=Distance.COSINE),
-        )
-
-    # 4. EMBED AND PUSH
-    points = []
-    for chunk in chunks:
-        vector = embeddings_model.embed_query(chunk)
-        points.append(
-            PointStruct(
-                id=str(uuid.uuid4()), 
-                vector=vector,
-                payload={"text": chunk, "source": filename} 
+        # 3. DATABASE SETUP
+        if not qdrant.collection_exists(COLLECTION_NAME):
+            qdrant.create_collection(
+                collection_name=COLLECTION_NAME,
+                vectors_config=VectorParams(size=384, distance=Distance.COSINE),
             )
-        )
-    
-    qdrant.upsert(collection_name=COLLECTION_NAME, points=points)
-    print(f"Successfully pushed {filename} to Qdrant!")
-    os.remove(file_path)
+
+        # 4. EMBED AND PUSH
+        points = []
+        for chunk in chunks:
+            vector = embeddings_model.embed_query(chunk)
+            points.append(
+                PointStruct(
+                    id=str(uuid.uuid4()), 
+                    vector=vector,
+                    payload={"text": chunk, "source": filename} 
+                )
+            )
+        
+        qdrant.upsert(collection_name=COLLECTION_NAME, points=points)
+        
+        latency = time.time() - start_time
+        logger.info(f"Successfully pushed {filename} to Qdrant", extra={"app_data": {
+            "event": "ingest_success",
+            "filename": filename,
+            "latency_sec": round(latency, 3),
+            "chunks": len(chunks),
+            "chars": len(full_text)
+        }})
+        
+    except Exception as e:
+        logger.error(f"Ingestion failed for {filename}: {str(e)}", extra={"app_data": {
+            "event": "ingest_error",
+            "filename": filename,
+            "error": str(e)
+        }})
+    finally:
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
 @app.post("/upload")
 async def upload_file(background_tasks: BackgroundTasks, file: UploadFile = File(...)):

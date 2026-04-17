@@ -89,26 +89,80 @@ if 'quiz_data' in st.session_state:
     quiz_payload = st.session_state['quiz_data']
     questions_list = quiz_payload.get("questions", [])
     
-    # Check if the AI returned NO_DATA
     if not questions_list or questions_list[0].get('question') == "NO_DATA":
-        st.warning(f"**Context Not Found**\n\nI could not find enough information about this topic in the selected document to generate a high-quality question. Please try a different topic or upload a more relevant document.")
+        st.warning("**Context Not Found**\n\nI could not find enough information about this topic.")
     else:
-        # If we have valid questions, render them as normal
         st.subheader(f"Your Assessment ({len(questions_list)} Questions)")
         
+        # Initialize session state for tracking answers if not exists
+        if 'user_answers' not in st.session_state:
+            st.session_state['user_answers'] = {}
+        if 'quiz_submitted' not in st.session_state:
+            st.session_state['quiz_submitted'] = False
+
         for index, q in enumerate(questions_list):
             with st.container(border=True):
                 st.markdown(f"**Q{index + 1}: {q['question']}**")
-                user_choice = st.radio("Select your answer:", q['options'], index=None, key=f"radio_{index}")
+                
+                # Disable radio if already submitted
+                user_choice = st.radio(
+                    "Select your answer:", 
+                    q['options'], 
+                    index=None, 
+                    key=f"radio_{index}",
+                    disabled=st.session_state['quiz_submitted']
+                )
                 
                 if user_choice:
-                    if user_choice == q['correct_answer']:
-                        st.success("Correct!")
+                    st.session_state['user_answers'][index] = user_choice
+
+                # Show results ONLY after submission
+                if st.session_state['quiz_submitted']:
+                    actual_choice = st.session_state['user_answers'].get(index)
+                    if actual_choice == q['correct_answer']:
+                        st.success(f"Correct!")
                     else:
-                        st.error(f"Incorrect. The correct answer is: {q['correct_answer']}")
+                        st.error(f"Incorrect. The correct answer was: {q['correct_answer']}")
                     
-                    specific_explanation = q.get('option_explanations', {}).get(user_choice, "No explanation provided.")
-                    st.info(f"**Analysis:** {specific_explanation}")
+                    with st.expander("View Analysis"):
+                        st.info(q.get('option_explanations', {}).get(actual_choice, "No explanation available."))
+
+        # --- Submit Logic ---
+        if not st.session_state['quiz_submitted']:
+            if st.button("Submit Quiz", type="primary", use_container_width=True):
+                # Check if all questions are answered
+                if len(st.session_state['user_answers']) < len(questions_list):
+                    st.warning("Please answer all questions before submitting.")
+                else:
+                    st.session_state['quiz_submitted'] = True
                     
-        with st.expander("View Raw Source Context"):
-            st.caption(quiz_payload.get('source_context', 'No context available.'))
+                    # Calculate Score
+                    correct_count = sum(1 for i, q in enumerate(questions_list) 
+                                       if st.session_state['user_answers'].get(i) == q['correct_answer'])
+                    
+                    # LOG THE SESSION (This will be picked up by ELK)
+                    import json
+                    from datetime import datetime
+                    log_entry = {
+                        "timestamp": datetime.utcnow().isoformat() + "Z",
+                        "level": "INFO",
+                        "service": "frontend-ui",
+                        "event": "quiz_submitted",
+                        "score": correct_count,
+                        "total": len(questions_list),
+                        "source": selected_doc,
+                        "topic": topic if topic else "Auto-Generate"
+                    }
+                    print(json.dumps(log_entry))
+                    st.rerun()
+
+        if st.session_state['quiz_submitted']:
+            correct_count = sum(1 for i, q in enumerate(questions_list) 
+                               if st.session_state['user_answers'].get(i) == q['correct_answer'])
+            st.balloons()
+            st.metric("Your Final Score", f"{correct_count} / {len(questions_list)}")
+            if st.button("Start New Quiz"):
+                del st.session_state['quiz_data']
+                del st.session_state['user_answers']
+                st.session_state['quiz_submitted'] = False
+                st.rerun()
