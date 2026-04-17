@@ -9,6 +9,7 @@
   loop:
     - qdrant.yaml
     - elasticsearch.yaml
+    - logstash-config.yaml
     - logstash.yaml
     - kibana.yaml
     - filebeat.yaml
