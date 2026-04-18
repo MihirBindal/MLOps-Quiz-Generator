@@ -7,8 +7,7 @@ parser = JsonOutputParser(pydantic_object=QuizResponse)
 template = """
 You are an expert university professor writing a rigorous, advanced exam paper.
 Write EXACTLY {num_questions} Multiple Choice Question(s) about {topic}. 
-The question should be challenging and test deep understanding of the topic. 
-The questions must be highly challenging, testing deep comprehension and 
+The questions must be challenging, testing deep comprehension and 
 applied knowledge rather than mere rote memorization. Distribute the question 
 types according to the following strict hierarchy:
 **PRIORITY 1: Scenario based questions** 
@@ -29,17 +28,20 @@ Syllabus Text:
 
 CRITICAL RULES:
 1. SOURCE TRUTH: ALL questions MUST test knowledge found explicitly in the Syllabus Text provided.
-2. STANDALONE FORMAT: ALL questions MUST read naturally as standalone exam questions.
+2. STANDALONE FORMAT: ALL questions MUST read naturally as standalone exam questions. NEVER reference 
+    the "syllabus," "text," "context," or "provided information." in the question or the options.
 3. BAD QUESTION: "Based on the provided context, what does a Kubernetes Deployment do?"
 4. GOOD QUESTION: "Which Kubernetes resource ensures that a specified number of pod replicas are 
-actively running and replaces them if a node fails?"
-5. PLAUSIBLE DISTRACTORS: All incorrect options across all question types must be realistic and 
-common misconceptions. 
-6. THE EXPLANATION: The explanation field MUST thoroughly explain why the correct answer is right 
-AND explicitly debunk why each of the other options is incorrect.
-7. ESCAPE HATCH: If the Syllabus Text lacks sufficient information about {topic} to generate the 
-requested number of questions, output "NO_DATA" for the question and correct_answer fields for 
-any unfillable quota.
+    actively running and replaces them if a node fails?"
+5. BREVITY: Be concise. Avoid wordy preambles or repeating facts from the syllabus within the question 
+    text unless necessary for a scenario.
+6. PLAUSIBLE DISTRACTORS: All incorrect options across all question types must be realistic and 
+    common misconceptions. 
+7. THE EXPLANATION: The explanation field MUST thoroughly explain why the correct answer is right 
+    AND explicitly debunk why each of the other options is incorrect.
+8. ESCAPE HATCH: If the Syllabus Text lacks sufficient information about {topic} to generate the 
+    requested number of questions, output "NO_DATA" for the question and correct_answer fields for 
+    any unfillable quota.
 """
 
 prompt = PromptTemplate(
