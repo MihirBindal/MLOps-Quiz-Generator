@@ -14,7 +14,7 @@ COPY tests/ ./tests/
 COPY utils/ ./utils/
 
 # --- RUN TESTS AS BUILD GATE ---
-RUN export PYTHONPATH=$PYTHONPATH:. && pytest tests/test_generate.py
+RUN export PYTHONPATH=$PYTHONPATH:. && export GEMINI_API_KEY=dummy_key_for_test && pytest tests/test_generate.py
 
 # STAGE 2: Final Production Image
 FROM python:3.12-slim
