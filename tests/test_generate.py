@@ -2,11 +2,10 @@ import pytest
 from fastapi.testclient import TestClient
 import sys
 import os
+from unittest.mock import MagicMock, patch
 
 # Add local directory to path
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-
-from unittest.mock import MagicMock, patch
 
 # Mock Qdrant and LLM before importing app to avoid initialization errors
 with patch('qdrant_client.QdrantClient'), patch('langchain_google_genai.ChatGoogleGenerativeAI'):
@@ -20,11 +19,8 @@ def test_health():
     assert response.status_code == 200
     assert response.json() == {"status": "healthy", "service": "generate-api"}
 
-@patch('main.qdrant')
-def test_empty_payload(mock_qdrant):
-    """Negative Test: Check if Generate API handles empty JSON correctly"""
-    # Mocking the query points to return nothing
-    mock_qdrant.query_points.return_value = MagicMock()
-    response = client.post("/generate", json={})
-    # Since we send empty JSON, FastAPI validation should catch it before Qdrant anyway
+def test_invalid_payload():
+    """Negative Test: Check if Generate API handles invalid data types correctly"""
+    # Sending a string instead of a JSON object will trigger a 422 before LLM/Qdrant logic
+    response = client.post("/generate", content="not-a-json")
     assert response.status_code == 422
