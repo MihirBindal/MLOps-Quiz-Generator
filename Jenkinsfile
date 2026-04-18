@@ -21,24 +21,14 @@ pipeline {
 
         stage('Build Docker Images') {
             steps {
-                echo "Building Ingest Service..."
-                sh "docker build -t ${IMAGE_INGEST}:latest -t ${IMAGE_INGEST}:${IMAGE_TAG} ./ingest"
+                echo "Building Ingest Service (with Multi-Stage Tests)..."
+                sh "docker build -t ${IMAGE_INGEST}:latest -t ${IMAGE_INGEST}:${IMAGE_TAG} -f ingest/Dockerfile ."
                 
-                echo "Building Generate Service..."
-                sh "docker build -t ${IMAGE_GENERATE}:latest -t ${IMAGE_GENERATE}:${IMAGE_TAG} ./generate"
+                echo "Building Generate Service (with Multi-Stage Tests)..."
+                sh "docker build -t ${IMAGE_GENERATE}:latest -t ${IMAGE_GENERATE}:${IMAGE_TAG} -f generate/Dockerfile ."
                 
                 echo "Building Frontend Service..."
                 sh "docker build -t ${IMAGE_FRONTEND}:latest -t ${IMAGE_FRONTEND}:${IMAGE_TAG} ./frontend"
-            }
-        }
-
-        stage('Run Automated Tests') {
-            steps {
-                echo "Installing test dependencies..."
-                sh "pip3 install -r requirements.txt --break-system-packages || pip3 install -r requirements.txt"
-                
-                echo "Executing Pytest (Positive & Negative Tests)..."
-                sh "export PYTHONPATH=\$PYTHONPATH:. && pytest tests/test_api.py"
             }
         }
 

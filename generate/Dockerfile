@@ -1,18 +1,33 @@
-# generate/Dockerfile
-FROM python:3.12-slim
+# STAGE 1: Builder & Test Gate
+FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
-# Copy requirements and install
+# Install python dependencies (CACHED LAYER)
 COPY requirements.txt .
 RUN pip install --no-cache-dir torch --extra-index-url https://download.pytorch.org/whl/cpu \
     && pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application code
-COPY . .
+# Copy source and tests
+COPY generate/ .
+COPY tests/ ./tests/
+COPY utils/ ./utils/
 
-# Expose the API port
+# --- RUN TESTS AS BUILD GATE ---
+RUN export PYTHONPATH=$PYTHONPATH:. && pytest tests/test_api.py
+
+# STAGE 2: Final Production Image
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Copy installed libraries from builder
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Copy only application code
+COPY generate/ .
+COPY utils/ ./utils/
+
 EXPOSE 9001
-
-# Command to run the FastAPI application
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "9001"]
