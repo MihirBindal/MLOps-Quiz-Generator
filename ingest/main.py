@@ -106,8 +106,8 @@ def process_and_embed(file_path: str, filename: str):
             "event": "ingest_success",
             "filename": filename,
             "file_size_bytes": file_size,
-            "num_chunks": len(chunks),
-            "char_count": len(full_text),
+            "chunks": len(chunks),
+            "chars": len(full_text),
             "latency_sec": round(latency, 3)
         }})
         
