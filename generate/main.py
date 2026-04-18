@@ -121,7 +121,7 @@ def generate_quiz(request: GenerateRequest):
         
         logger.info(f"Quiz generated successfully", extra={"app_data": {
             "event": "generate_success",
-            "topic": request.topic,
+            "topic": request.topic if request.topic else f"Full Doc: {request.source_file}",
             "source": request.source_file,
             "latency_sec": round(latency, 3),
             "qdrant_max_score": round(max_score, 3),
