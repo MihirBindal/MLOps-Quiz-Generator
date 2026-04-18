@@ -98,13 +98,17 @@ def process_and_embed(file_path: str, filename: str):
         
         qdrant.upsert(collection_name=COLLECTION_NAME, points=points)
         
+        # Calculate stats
         latency = time.time() - start_time
+        file_size = os.path.getsize(filepath)
+        
         logger.info(f"Successfully pushed {filename} to Qdrant", extra={"app_data": {
             "event": "ingest_success",
             "filename": filename,
-            "latency_sec": round(latency, 3),
-            "chunks": len(chunks),
-            "chars": len(full_text)
+            "file_size_bytes": file_size,
+            "num_chunks": len(chunks),
+            "char_count": len(full_text),
+            "latency_sec": round(latency, 3)
         }})
         
     except Exception as e:
