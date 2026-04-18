@@ -10,3 +10,4 @@ qdrant-client
 pytest
 httpx
 langchain-community
+pymupdf

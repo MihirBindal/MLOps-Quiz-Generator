@@ -19,15 +19,25 @@ pipeline {
             }
         }
 
-        stage('Build Docker Images') {
+        stage('Run Automated Tests (Docker-Based)') {
             steps {
-                echo "Building Ingest Service (with Multi-Stage Tests)..."
+                echo "Running Ingest Service Tests inside Docker..."
+                sh "docker build --target builder -f ingest/Dockerfile ."
+                
+                echo "Running Generate Service Tests inside Docker..."
+                sh "docker build --target builder -f generate/Dockerfile ."
+            }
+        }
+
+        stage('Build Production Images') {
+            steps {
+                echo "Finalizing Ingest Image..."
                 sh "docker build -t ${IMAGE_INGEST}:latest -t ${IMAGE_INGEST}:${IMAGE_TAG} -f ingest/Dockerfile ."
                 
-                echo "Building Generate Service (with Multi-Stage Tests)..."
+                echo "Finalizing Generate Image..."
                 sh "docker build -t ${IMAGE_GENERATE}:latest -t ${IMAGE_GENERATE}:${IMAGE_TAG} -f generate/Dockerfile ."
                 
-                echo "Building Frontend Service..."
+                echo "Finalizing Frontend Image..."
                 sh "docker build -t ${IMAGE_FRONTEND}:latest -t ${IMAGE_FRONTEND}:${IMAGE_TAG} ./frontend"
             }
         }

@@ -4,17 +4,27 @@ import sys
 import os
 
 # Add service directories to path so we can import apps
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "ingest"))
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "generate"))
 
-# Import apps (suppressing heavy init if possible, but TestClient handles it)
+# Import apps
 try:
-    from ingest.main import app as ingest_app
-    from generate.main import app as generate_app
-except ImportError:
-    # Fallback for different directory structures in CI
-    from main import app as ingest_app
-    from main import app as generate_app
+    # Try local import first (for Docker/Root context)
+    import main as ingest_app_mod
+    ingest_app = ingest_app_mod.app
+    # We'll mock generate for now if we are only testing one at a time, 
+    # or just try to import it
+    import main as generate_app_mod
+    generate_app = generate_app_mod.app
+except (ImportError, AttributeError):
+    try:
+        from ingest.main import app as ingest_app
+        from generate.main import app as generate_app
+    except ImportError:
+        # Final fallback
+        from main import app as ingest_app
+        from main import app as generate_app
 
 ingest_client = TestClient(ingest_app)
 generate_client = TestClient(generate_app)
