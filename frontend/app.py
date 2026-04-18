@@ -166,12 +166,13 @@ if 'quiz_data' in st.session_state:
                                        if st.session_state['user_answers'].get(i) == q['correct_answer'])
                     
                     # LOG THE SESSION (This will be picked up by ELK)
-                    logger.info("Quiz submitted", extra={"app_data": {
+                    log_topic = topic if topic else f"Full Doc: {selected_doc}"
+                    logger.info(f"Quiz submitted for {selected_doc}", extra={"app_data": {
                         "event": "quiz_submitted",
                         "score": correct_count,
                         "total": len(questions_list),
                         "source": selected_doc,
-                        "topic": topic if topic else "Auto-Generate"
+                        "topic": log_topic
                     }})
                     st.rerun()
 
