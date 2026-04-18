@@ -21,7 +21,7 @@ COPY utils/ ./utils/
 
 # --- RUN TESTS AS BUILD GATE ---
 # If tests fail, the build will stop here
-RUN export PYTHONPATH=$PYTHONPATH:. && pytest tests/test_api.py
+RUN export PYTHONPATH=$PYTHONPATH:. && pytest tests/test_ingest.py
 
 # STAGE 2: Final Production Image
 FROM python:3.12-slim

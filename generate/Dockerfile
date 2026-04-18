@@ -14,7 +14,7 @@ COPY tests/ ./tests/
 COPY utils/ ./utils/
 
 # --- RUN TESTS AS BUILD GATE ---
-RUN export PYTHONPATH=$PYTHONPATH:. && pytest tests/test_api.py
+RUN export PYTHONPATH=$PYTHONPATH:. && pytest tests/test_generate.py
 
 # STAGE 2: Final Production Image
 FROM python:3.12-slim

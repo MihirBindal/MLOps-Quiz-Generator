@@ -11,3 +11,8 @@ pytest
 httpx
 langchain-community
 pymupdf
+python-docx
+langchain-google-genai
+langchain-huggingface
+python-dotenv
+numpy
