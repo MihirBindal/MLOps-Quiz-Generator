@@ -37,6 +37,10 @@ if not logger.handlers:
 
 app = FastAPI(title="Ingest Service - Modular Multi-Format OCR")
 
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "service": "ingest-api"}
+
 logger.info("Loading SentenceTransformers...")
 embeddings_model = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
 QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")

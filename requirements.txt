@@ -7,3 +7,5 @@ Pillow
 langchain-text-splitters
 sentence-transformers
 qdrant-client
+pytest
+httpx

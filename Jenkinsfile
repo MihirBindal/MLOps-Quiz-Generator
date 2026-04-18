@@ -32,6 +32,16 @@ pipeline {
             }
         }
 
+        stage('Run Automated Tests') {
+            steps {
+                echo "Installing test dependencies..."
+                sh "pip3 install -r requirements.txt --break-system-packages || pip3 install -r requirements.txt"
+                
+                echo "Executing Pytest (Positive & Negative Tests)..."
+                sh "export PYTHONPATH=\$PYTHONPATH:. && pytest tests/test_api.py"
+            }
+        }
+
         stage('Push to Docker Hub') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhubcredentials', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
