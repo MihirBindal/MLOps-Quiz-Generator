@@ -100,7 +100,7 @@ def process_and_embed(file_path: str, filename: str):
         
         # Calculate stats
         latency = time.time() - start_time
-        file_size = os.path.getsize(filepath)
+        file_size = os.path.getsize(file_path)
         
         logger.info(f"Successfully pushed {filename} to Qdrant", extra={"app_data": {
             "event": "ingest_success",
