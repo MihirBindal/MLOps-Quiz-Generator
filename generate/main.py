@@ -16,7 +16,6 @@ from qdrant_client.models import Filter, FieldCondition, MatchValue
 from api_define import llm
 from prompt_template import prompt, parser
 
-# --- 1. Structured Logging Setup ---
 class JsonFormatter(logging.Formatter):
     def format(self, record):
         log_data = {
@@ -106,8 +105,7 @@ def generate_quiz(request: GenerateRequest):
 
     try:
         display_topic = request.topic if request.topic else f"the core concepts of {request.source_file}"
-        
-       
+
         prompt_value = prompt.format(
             topic=display_topic, 
             context=context_text,
