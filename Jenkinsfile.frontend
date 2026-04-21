@@ -1,0 +1,55 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_HUB_USER = 'mihirbindal'
+        IMAGE_FRONTEND = "${DOCKER_HUB_USER}/spe-frontend"
+        IMAGE_TAG = "v${env.BUILD_ID}"
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                echo "Fetching the latest code from GitHub..."
+                checkout scm
+            }
+        }
+
+        stage('Build Production Image') {
+            steps {
+                echo "Building Frontend Image..."
+                sh "docker build -t ${IMAGE_FRONTEND}:latest -t ${IMAGE_FRONTEND}:${IMAGE_TAG} ./frontend"
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhubcredentials', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
+                    echo "Logging into Docker Hub..."
+                    sh "echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin"
+                    
+                    echo "Pushing Frontend Image..."
+                    sh "docker push ${IMAGE_FRONTEND}:latest"
+                    sh "docker push ${IMAGE_FRONTEND}:${IMAGE_TAG}"
+                }
+            }
+        }
+
+        stage('Deploy to Production (Ansible)') {
+            steps {
+                echo "Triggering Ansible Playbook for deployment..."
+                dir('devops/ansible') {
+                    sh "pip3 install kubernetes --break-system-packages || pip3 install kubernetes"
+                    sh "KUBECONFIG=/home/mihir/.kube/config ansible-playbook deploy.yml"
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo "Cleaning up local Docker images to save space..."
+            sh "docker image prune -f"
+        }
+    }
+}

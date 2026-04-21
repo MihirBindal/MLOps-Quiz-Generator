@@ -107,7 +107,7 @@ def generate_quiz(request: GenerateRequest):
     try:
         display_topic = request.topic if request.topic else f"the core concepts of {request.source_file}"
         
-        # Invoke LLM and capture response for metadata
+       
         prompt_value = prompt.format(
             topic=display_topic, 
             context=context_text,
