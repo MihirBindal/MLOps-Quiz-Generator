@@ -41,7 +41,7 @@ app = FastAPI(title="Generate Service - AI Quiz Master")
 def health_check():
     return {"status": "healthy", "service": "generate-api"}
 
-# --- 2. Infrastructure Setup ---
+
 QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
 qdrant = QdrantClient(host=QDRANT_HOST, port=6333)
 COLLECTION_NAME = "spe_quiz_knowledge"
