@@ -6,7 +6,6 @@ import logging
 import time
 from datetime import datetime
 
-# --- 1. Structured Logging Setup ---
 class JsonFormatter(logging.Formatter):
     def format(self, record):
         log_data = {
