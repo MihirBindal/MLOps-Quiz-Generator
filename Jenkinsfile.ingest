@@ -57,6 +57,12 @@ pipeline {
         always {
             echo "Cleaning up local Docker images to save space..."
             sh "docker image prune -f"
+            
+            emailext (
+                to: 'mihirbindal3@gmail.com',
+                subject: "SPE Build Status: ${currentBuild.fullDisplayName}",
+                body: "Build ${currentBuild.result} for project ${env.JOB_NAME}. Check console: ${env.BUILD_URL}"
+            )
         }
     }
 }
