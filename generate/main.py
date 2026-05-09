@@ -132,6 +132,9 @@ def generate_quiz(request: GenerateRequest):
             "num_questions": request.num_questions
         }})
         
+        if isinstance(result, list):
+            result = {"questions": result}
+            
         result["source_context"] = context_text 
         return result
         
