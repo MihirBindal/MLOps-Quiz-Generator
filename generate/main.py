@@ -79,7 +79,7 @@ def generate_quiz(request: GenerateRequest):
         )
 
     chunks_to_fetch = 5 if request.num_questions == 1 else 10
-    threshold = 0.5 if request.topic else 0.2 
+    threshold = 0.1 if request.topic else 0.05 
 
     search_result = qdrant.query_points(
         collection_name=COLLECTION_NAME,
