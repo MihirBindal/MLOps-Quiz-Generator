@@ -19,3 +19,4 @@ __pycache__/
 # Ignore Vault keys and scripts
 devops/vault-keys.txt
 devops/unseal_vault.sh
+SPE_Final_Project_Documentation.tex

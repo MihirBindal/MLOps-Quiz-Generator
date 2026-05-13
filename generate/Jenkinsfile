@@ -47,7 +47,11 @@ pipeline {
                 echo "Triggering Ansible Playbook for deployment..."
                 dir('devops/ansible') {
                     sh "pip3 install kubernetes --break-system-packages || pip3 install kubernetes"
-                    sh "KUBECONFIG=/home/mihir/.kube/config ansible-playbook deploy.yml"
+                    withCredentials([string(credentialsId: 'ansible-vault-pass', variable: 'VAULT_PASS')]) {
+                        sh "echo \$VAULT_PASS > .vault_pass"
+                        sh "KUBECONFIG=/home/mihir/.kube/config ansible-playbook deploy.yml --vault-password-file .vault_pass"
+                        sh "rm .vault_pass"
+                    }
                 }
             }
         }

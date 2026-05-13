@@ -1,6 +1,23 @@
 ---
 # We are deploying to the 'default' namespace as requested
 
+- name: Load Encrypted Ansible Vault Secrets
+  include_vars:
+    file: secrets.yml
+
+- name: Check if Vault is sealed
+  command: kubectl exec vault-0 -- vault status -format=json
+  register: vault_status
+  ignore_errors: true
+  changed_when: false
+
+- name: Unseal Vault if necessary
+  command: "kubectl exec vault-0 -- vault operator unseal {{ vault_unseal_key }}"
+  when: 
+    - vault_status.rc == 2 or (vault_status.stdout | from_json).sealed
+  register: unseal_result
+  changed_when: "'Unseal Key (Multisig) Secret Threshold: 1' in unseal_result.stdout"
+
 - name: Apply Infrastructure Manifests (Database & ELK)
   kubernetes.core.k8s:
     state: present
