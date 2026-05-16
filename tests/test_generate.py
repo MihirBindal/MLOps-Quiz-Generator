@@ -16,7 +16,7 @@ client = TestClient(app)
 def test_health():
     """Positive Test: Check if Generate API is healthy"""
     response = client.get("/health")
-    assert response.status_code == 500
+    assert response.status_code == 200
     assert response.json() == {"status": "healthy", "service": "generate-api"}
 
 def test_invalid_payload():
